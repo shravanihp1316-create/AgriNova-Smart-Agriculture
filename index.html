@@ -1,0 +1,380 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>AGRINOVA DASHBOARD</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:linear-gradient(90deg,#021f12,#043b23);
+  color:#dfffe9;
+}
+
+header{
+  text-align:center;
+  padding:20px;
+  font-size:28px;
+  color:#00ff88;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:20px;
+  padding:20px;
+}
+
+.card{
+  background:#062f1e;
+  border-radius:20px;
+  padding:20px;
+}
+
+.circle{
+  width:80px;height:80px;
+  border-radius:50%;
+  border:6px solid #00ff88;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.bar{
+  height:8px;
+  background:#0b3d2a;
+  border-radius:10px;
+}
+.bar span{
+  display:block;
+  height:100%;
+  background:#00ff88;
+}
+
+/* Chat */
+.chat-btn{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  background:#00c98a;
+  width:60px;height:60px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  font-size:25px;
+}
+
+.chat-box{
+  position:fixed;
+  bottom:90px;
+  right:20px;
+  width:320px;height:450px;
+  background:#0b2e1f;
+  display:none;
+  flex-direction:column;
+  border-radius:15px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.7);
+}
+
+.messages{
+  flex:1;
+  overflow:auto;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+}
+
+.msg{
+  padding:10px 14px;
+  border-radius:18px;
+  margin:6px 0;
+  max-width:75%;
+  font-size:14px;
+}
+
+.user{
+  align-self:flex-end;
+  background:#00c98a;
+  color:#002b1a;
+}
+
+.bot{
+  align-self:flex-start;
+  background:white;
+  color:black;
+}
+
+.chat-box input{
+  border:none;
+  padding:10px;
+  outline:none;
+}
+
+button{
+  margin:3px;
+  border:none;
+  border-radius:10px;
+  padding:6px;
+  background:#00c98a;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<header>🌿 AGRINOVA DASHBOARD</header>
+
+<div class="grid">
+
+<div class="card">
+<h3>Node 1</h3>
+<div class="circle" id="t1">--</div>
+Humidity <span id="h1v"></span>
+<div class="bar"><span id="h1"></span></div>
+Moisture <span id="m1v"></span>
+<div class="bar"><span id="m1"></span></div>
+Gas <span id="g1v"></span>
+<div class="bar"><span id="g1"></span></div>
+</div>
+
+<div class="card">
+<h3>Node 2</h3>
+<div class="circle" id="t2">--</div>
+Humidity <span id="h2v"></span>
+<div class="bar"><span id="h2"></span></div>
+Moisture <span id="m2v"></span>
+<div class="bar"><span id="m2"></span></div>
+Gas <span id="g2v"></span>
+<div class="bar"><span id="g2"></span></div>
+</div>
+
+<div class="card">
+<h3>Node 3</h3>
+<div class="circle" id="t3">--</div>
+Humidity <span id="h3v"></span>
+<div class="bar"><span id="h3"></span></div>
+Moisture <span id="m3v"></span>
+<div class="bar"><span id="m3"></span></div>
+Gas <span id="g3v"></span>
+<div class="bar"><span id="g3"></span></div>
+</div>
+
+<div class="card">
+<h3>Node 4</h3>
+<div class="circle" id="t4">--</div>
+Humidity <span id="h4v"></span>
+<div class="bar"><span id="h4"></span></div>
+Moisture <span id="m4v"></span>
+<div class="bar"><span id="m4"></span></div>
+Gas <span id="g4v"></span>
+<div class="bar"><span id="g4"></span></div>
+</div>
+
+</div>
+
+<!-- CHAT -->
+<div class="chat-btn" onclick="toggleChat()">💬</div>
+
+<div class="chat-box" id="chatBox">
+<div class="messages" id="messages"></div>
+<input id="input" placeholder="Ask anything about farming..." onkeydown="sendMsg(event)">
+<button onclick="startVoice()">🎤 Speak</button>
+<button onclick="stopChatbot()">🛑 Stop</button>
+<button onclick="startChatbot()">▶️ Start</button>
+</div>
+
+<script>
+
+/* APIs */
+const CHANNEL_ID="3198512";
+const KEYS=["YOUR_THINGSPEAK_READ_KEY_1","YOUR_THINGSPEAK_READ_KEY_2"];
+let latestData={};
+let chatbotEnabled=true;
+
+/* FETCH */
+async function fetchData(){
+  for(let key of KEYS){
+    try{
+      let res=await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?api_key=${key}&results=1`);
+      let data=await res.json();
+
+      if(data.feeds.length){
+        let f=data.feeds[0];
+        latestData=f;
+        updateAll(f.field1,f.field2,f.field3,f.field4);
+        return;
+      }
+    }catch{}
+  }
+}
+
+function updateAll(t,m,h,g){
+  for(let i=1;i<=4;i++){
+    document.getElementById("t"+i).innerText=t+"°C";
+    document.getElementById("h"+i).style.width=h+"%";
+    document.getElementById("h"+i+"v").innerText=h+"%";
+    document.getElementById("m"+i).style.width=m+"%";
+    document.getElementById("m"+i+"v").innerText=m+"%";
+    document.getElementById("g"+i).style.width=Math.min(g,100)+"%";
+    document.getElementById("g"+i+"v").innerText=g;
+  }
+}
+
+setInterval(fetchData,5000);
+fetchData();
+
+/* CHAT UI */
+function toggleChat(){
+  chatBox.style.display=chatBox.style.display==="flex"?"none":"flex";
+}
+
+function addMsg(t,type){
+  let d=document.createElement("div");
+  d.className="msg "+type;
+  d.innerText=t;
+  messages.appendChild(d);
+  messages.scrollTop=messages.scrollHeight;
+}
+
+/* LANGUAGE DETECTION */
+function detectLang(text){
+  if(/[ಅ-ಹ]/.test(text)) return "kn-IN";
+  if(/[अ-ह]/.test(text)) return "hi-IN";
+  if(/[அ-ஹ]/.test(text)) return "ta-IN";
+  if(/[అ-హ]/.test(text)) return "te-IN";
+  return "en-IN";
+}
+
+/* MULTI-LANGUAGE VOICE */
+function speak(text){
+  speechSynthesis.cancel();
+
+  const lang = detectLang(text);
+  let voices = speechSynthesis.getVoices();
+
+  if(!voices.length){
+    speechSynthesis.onvoiceschanged = () => speak(text);
+    return;
+  }
+
+  let voice = voices.find(v => v.lang === lang);
+
+  if(!voice){
+    voice = voices.find(v => v.lang.startsWith(lang.split("-")[0]));
+  }
+
+  if(!voice){
+    voice = voices.find(v => v.lang.includes("en"));
+  }
+
+  let utter = new SpeechSynthesisUtterance(text);
+  utter.lang = lang;
+
+  if(voice) utter.voice = voice;
+
+  speechSynthesis.speak(utter);
+}
+
+/* STOP/START */
+function stopChatbot(){
+  chatbotEnabled=false;
+  speechSynthesis.cancel();
+  addMsg("🔴 Chatbot stopped","bot");
+}
+
+function startChatbot(){
+  chatbotEnabled=true;
+  addMsg("🟢 Chatbot started","bot");
+}
+
+/* SMART AI */
+async function processMessage(text){
+
+  if(!chatbotEnabled){
+    addMsg("🚫 Chatbot is OFF","bot");
+    return;
+  }
+
+  speechSynthesis.cancel();
+  addMsg("🧑‍🌾 "+text,"user");
+
+  let reply="";
+  let lower=text.toLowerCase();
+
+  if(lower.includes("temperature")){
+    reply="🌡 Current temperature is "+latestData.field1+"°C";
+  }
+  else if(lower.includes("humidity")){
+    reply="💧 Humidity is "+latestData.field3+"%";
+  }
+  else if(lower.includes("moisture") || lower.includes("soil")){
+    reply="🌱 Soil moisture is "+latestData.field2+"%";
+  }
+  else if(lower.includes("gas")){
+    reply="🧪 Gas level is "+latestData.field4;
+  }
+  else{
+    try{
+      let res=await fetch("https://api.groq.com/openai/v1/chat/completions",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":"Bearer "+AI_KEY
+        },
+        body:JSON.stringify({
+          model:"openai/gpt-oss-120b",
+          messages:[
+            {
+              role:"system",
+              content:`You are an advanced AI farming assistant 🌾.
+              Answer any question clearly.
+              Use simple language.
+              Reply in same language.
+              
+              Data:
+              Temp ${latestData.field1}°C
+              Humidity ${latestData.field3}%
+              Moisture ${latestData.field2}%
+              Gas ${latestData.field4}`
+            },
+            {role:"user",content:text}
+          ]
+        })
+      });
+
+      let data=await res.json();
+      reply="🤖 "+data.choices[0].message.content;
+
+    }catch{
+      reply="⚠️ AI error";
+    }
+  }
+
+  addMsg(reply,"bot");
+  speak(reply);
+}
+
+/* TEXT INPUT */
+function sendMsg(e){
+  if(e.key==="Enter"){
+    processMessage(input.value);
+    input.value="";
+  }
+}
+
+/* VOICE INPUT */
+let recognition=new (window.SpeechRecognition||window.webkitSpeechRecognition)();
+recognition.onresult=e=>{
+  processMessage(e.results[0][0].transcript);
+};
+
+function startVoice(){
+  recognition.start();
+}
+
+</script>
+
+</body>
+</html>
